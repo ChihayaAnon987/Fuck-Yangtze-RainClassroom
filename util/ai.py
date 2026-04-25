@@ -1,73 +1,55 @@
-import json
-
-from openai import OpenAI
-from config import ai_key
-from util.enncy import search
-from util.ocr import ocr_form_url_image
-
-### 摘抄自一个学弟的第二课堂仓库AI部分
-## https://github.com/tinyvan/SecondClass
-
-system_prompt = """
-我将为你发送类似如下格式的文本，question为使用OCR工具对图片题目识别的结果，你需要根据语义拼接，有的时候ABCD字符会缺失或者在选项后面，具体根据顺序和语义；
-searched为尝试将question提交到题库API进行检索的结果，仅用于当你无法判断出答案时，用于辅助，不一定与题目契合！；
-options提供选项（如果选项为空，请从question中寻找，如果question没有选项，只能蒙一个answers了），回答的时候必须根据type（例如type为单选题应该只给一个结果，type为填空题应该给文本，type为多选题应该给多个答案）
-{
-    "type": "单选题",
-    "question": ['下面（）算法适合构造一个稠密图G的最小生成树', 'A.Prim算法', 'B.Kruskal算法', 'C.Floyd算法', 'D.Dijkstra算法'],
-    "options": ["A","B","C","D"],
-    "searched" : "题库搜索结果"
-}
-你应该回答：
-{
-"thinking":"你简洁的思考过程",
-"answer":["A"]
-}
-如果question模糊不清，即使结合JSON的所有信息都无法辨别并给出答案。answer置为空list
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+AI解题模块（改用策略层）
+重构为使用AIStrategy，支持多模型并行调用
 """
 
-client = None
+import logging
+from typing import List
+from util.ai_strategy import AIStrategy
+
+logger = logging.getLogger(__name__)
+
+# 全局策略实例
+_strategy = None
 
 
-def LLM_init(api_key: str):
-    global client
-    client = OpenAI(
-        api_key=api_key,
-        base_url="https://api.chatanywhere.tech/v1",
-    )
+def init_ai_strategy(timeout: int = 30):
+    """
+    初始化AI策略引擎
+    
+    Args:
+        timeout: 请求超时时间（秒）
+    """
+    global _strategy
+    _strategy = AIStrategy(timeout=timeout)
+    logger.info(f"[AI] 策略引擎已初始化，支持模型: {_strategy.available_models}")
 
 
-def get_ans(text):
-    if client is None:
-        raise Exception("LLM is not initialized")
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        response_format={"type": "json_object"},
-        messages=[
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': text}],
-    )
-    return completion.choices[0].message.content
-
-
-def request_ai(type, problem, options, img_url):
-    problem_text = problem
-    if problem == "":
-        print("题目文本为空 启用OCR图片识别")
-        problem_text = ocr_form_url_image(img_url)
-        print("OCR识别结果", problem_text)
-
-    LLM_init(ai_key)
-    send = {
-        "type": type,
-        "question": problem_text,
-        "options": options
-    }
-
-    enncy_result = search(problem_text)
-    print("搜题结果", enncy_result)
-    send["searched"] = enncy_result
-
-    response = get_ans(str(send))
-    print(response)
-    return json.loads(response)["answer"]
+def request_ai(type, problem, options, img_url) -> List[str]:
+    """
+    请求AI解题
+    
+    这是兼容现有代码的接口，内部使用策略层
+    
+    Args:
+        type: 题目类型
+        problem: 题干文本
+        options: 选项列表
+        img_url: 题目图片URL
+        
+    Returns:
+        答案列表，如 ["A"] 或 ["填空答案"]
+    """
+    if _strategy is None:
+        logger.error("[AI] AI策略未初始化")
+        return []
+        
+    try:
+        answer = _strategy.solve(type, problem, options, img_url)
+        logger.info(f"[AI] 解题完成 - 来源: ai, 答案: {answer}")
+        return answer
+    except Exception as e:
+        logger.error(f"[AI] 解题失败: {e}")
+        return []

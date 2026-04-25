@@ -1,0 +1,192 @@
+{
+  "1665047802466078208:1665047947295657472": {
+    "question": {
+      "problem_id": "1665047947295657472",
+      "problem_type": 1,
+      "problem_content": "在递归的预测分析过程中进行翻译，以下说法不正确的是( )。",
+      "options": [
+        {
+          "key": "A",
+          "value": "可以将一个递归的预测分析器扩展为一个翻译器"
+        },
+        {
+          "key": "B",
+          "value": "在语法分析器中，每个非终结符A对应一个过程，在做语义分析时，要将过程扩展成一个函数"
+        },
+        {
+          "key": "C",
+          "value": "以继承属性作为函数的参数，以综合属性作为函数的返回值"
+        },
+        {
+          "key": "D",
+          "value": "以综合属性作为函数的参数，以继承属性作为函数的返回值"
+        }
+      ],
+      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/37857819/cover2868_20260416155303.jpg?imageView2/2/w/1280/format/webp&e=1776351766&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:UmiPPrybdg7If6iT4fQ36ukHFY8="
+    },
+    "answer": [
+      "D"
+    ],
+    "updated_at": 1776330164247
+  },
+  "1665047802466078208:1665047947530538496": {
+    "question": {
+      "problem_id": "1665047947530538496",
+      "problem_type": 1,
+      "problem_content": "S→bAb {print “1”}\rA→(B {print “2”}\rA→a {print “3”}\rB→aA) {print “4”}\r若输入序列为b(a(a(aa)))b，且采用自底向上的分析方法，则输出序列为( )。",
+      "options": [
+        {
+          "key": "A",
+          "value": "12224441"
+        },
+        {
+          "key": "B",
+          "value": "34242421"
+        },
+        {
+          "key": "C",
+          "value": "32224441"
+        },
+        {
+          "key": "D",
+          "value": "14242421"
+        }
+      ],
+      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/37857819/cover2848_20260416155308.jpg?imageView2/2/w/1280/format/webp&e=1776352998&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:4JIj3Pkr8jAPPbvhwT2hK56r1fw="
+    },
+    "answer": [
+      "B"
+    ],
+    "updated_at": 1776331404026
+  },
+  "1667950695615597312:1667951339684765696": {
+    "question": {
+      "problem_id": "1667951339684765696",
+      "problem_type": 3,
+      "problem_content": "教育应该培养的是什么样的人？\r在德与才不可兼得的情况下，你们认为德与才哪个更重要？",
+      "options": [
+        {
+          "key": "A",
+          "value": "德更重要"
+        },
+        {
+          "key": "B",
+          "value": "才更重要"
+        },
+        {
+          "key": "C",
+          "value": "很难选，我有其他想法"
+        }
+      ],
+      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/35013256/cover5636_20260420160123.jpg?imageView2/2/w/1280/format/webp&e=1776694111&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:17LAsF7xqyS6e0-wJBFhCjrlYjw="
+    },
+    "answer": [
+      "A"
+    ],
+    "updated_at": 1776672494196
+  },
+  "1667950695615597312:1667951339969978368": {
+    "question": {
+      "problem_id": "1667951339969978368",
+      "problem_type": 3,
+      "problem_content": "请你基于直觉，做出选择：",
+      "options": [
+        {
+          "key": "A",
+          "value": "连接"
+        },
+        {
+          "key": "B",
+          "value": "不连接"
+        },
+        {
+          "key": "C",
+          "value": "难以抉择"
+        }
+      ],
+      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/35013256/cover5300331_20260420163047.jpg?imageView2/2/w/1280/format/webp&e=1776697550&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:5gzIkSHaHT1wk2jeLnbvlzj-SmU="
+    },
+    "answer": [
+      "A"
+    ],
+    "updated_at": 1776675964844
+  },
+  "1667950695615597312:1667951340011921408": {
+    "question": {
+      "problem_id": "1667951340011921408",
+      "problem_type": 3,
+      "problem_content": "经过讨论，请你再一次做出选择：",
+      "options": [
+        {
+          "key": "A",
+          "value": "连接"
+        },
+        {
+          "key": "B",
+          "value": "不连接"
+        },
+        {
+          "key": "C",
+          "value": "难以抉择"
+        }
+      ],
+      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/35013256/cover5300333_20260420163047.jpg?imageView2/2/w/1280/format/webp&e=1776699529&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:jfl9VkaZCwTqKpbhhoPhbMdoTmY="
+    },
+    "answer": [
+      "C"
+    ],
+    "updated_at": 1776677914177
+  },
+  "1670123252510955648:1670123692132956288": {
+    "question": {
+      "problem_id": "1670123692132956288",
+      "problem_type": 1,
+      "problem_content": "四元式之间的联系是通过( )实现的。",
+      "options": [
+        {
+          "key": "A",
+          "value": "指示器"
+        },
+        {
+          "key": "B",
+          "value": "临时变量"
+        },
+        {
+          "key": "C",
+          "value": "符号表"
+        },
+        {
+          "key": "D",
+          "value": "程序变量"
+        }
+      ],
+      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/37857819/cover2790_20260423155738.jpg?imageView2/2/w/1280/format/webp&e=1776957062&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:RRnCXSzzJIP21P_UzOgNP8FZUnA="
+    },
+    "answer": [
+      "B"
+    ],
+    "updated_at": 1776935465672
+  },
+  "1670123252510955648:1670123691898075264": {
+    "question": {
+      "problem_id": "1670123691898075264",
+      "problem_type": 1,
+      "problem_content": "数组元素的地址由两部分构成，一部分是基地址，另一部分是偏移量。",
+      "options": [
+        {
+          "key": "A",
+          "value": "对"
+        },
+        {
+          "key": "B",
+          "value": "错"
+        }
+      ],
+      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/37857819/cover2791_20260423155749.jpg?imageView2/2/w/1280/format/webp&e=1776957178&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:cBKPaV6txLu-dLISsH2TA4nbRhE="
+    },
+    "answer": [
+      "A"
+    ],
+    "updated_at": 1776935610698
+  }
+}

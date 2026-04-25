@@ -5,3 +5,5 @@ requests
 paddleocr
 paddlepaddle
 websocket-client
+python-dotenv
+apscheduler

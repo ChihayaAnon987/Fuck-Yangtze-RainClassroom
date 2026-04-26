@@ -87,19 +87,43 @@ class MultiModelAIProvider:
             if response_format is not None:
                 request_kwargs["response_format"] = response_format
 
+            # 手动计时
+            import time
+            start_time = time.time()
             # OpenAI SDK本身会处理超时，我们依赖它的超时机制
             response = client.chat.completions.create(**request_kwargs)
+            elapsed_time = time.time() - start_time
+            
             answer = response.choices[0].message.content
             
             # 使用模型配置中的priority作为置信度
             confidence = float(config.get("priority", 1.0))
             
+            print(f"[AI PROVIDER] 模型 {model_name} 输出: {answer} 用时: {elapsed_time:.2f}s")
             return answer, confidence, model_name
             
         except Exception as e:
             print(f"[AI PROVIDER] 调用模型 {model_name} 失败: {e}")
             # 返回空答案，置信度为0
             return "", 0.0, model_name
+
+    def _select_best_answer(self, results: List[Tuple[str, float, str]]) -> Tuple[str, float, str]:
+        """从多个模型结果中选择最佳答案"""
+        # 优先选择非空答案，然后按置信度排序
+        non_empty_results = [r for r in results if r[0] and r[0].strip() != "[]" and r[1] > 0]
+        if non_empty_results:
+            return max(non_empty_results, key=lambda x: x[1])
+            
+        # 如果没有非空答案，尝试找看起来有效的空答案（可能是正确的空答案）
+        valid_results = [r for r in results if r[1] > 0]
+        if valid_results:
+            return max(valid_results, key=lambda x: x[1])
+            
+        # 如果所有结果都无效，返回置信度最高的（可能是空答案）
+        if results:
+            return max(results, key=lambda x: x[1])
+        else:
+            raise RuntimeError("所有模型调用都失败了")
 
     def chat_completion_parallel(
         self,
@@ -166,27 +190,7 @@ class MultiModelAIProvider:
                         print(f"[AI PROVIDER] 模型 {model_name} 执行异常: {inner_e}")
                         results.append(("", 0.0, model_name))
         
-        print(f"[AI PROVIDER] 模型调用结果: {results}")
-
-        # 选择置信度最高的有效答案
-        # 优先选择非空答案，然后按置信度排序
-        non_empty_results = [r for r in results if r[0] and r[0].strip() != "[]" and r[1] > 0]
-        if non_empty_results:
-            best_result = max(non_empty_results, key=lambda x: x[1])
-            return best_result
-            
-        # 如果没有非空答案，尝试找看起来有效的空答案（可能是正确的空答案）
-        valid_results = [r for r in results if r[1] > 0]
-        if valid_results:
-            best_result = max(valid_results, key=lambda x: x[1])
-            return best_result
-            
-        # 如果所有结果都无效，返回置信度最高的（可能是空答案）
-        if results:
-            best_result = max(results, key=lambda x: x[1])
-            return best_result
-        else:
-            raise RuntimeError("所有模型调用都失败了")
+        return self._select_best_answer(results)
 
     def get_available_models(self) -> List[str]:
         """获取可用的模型列表"""

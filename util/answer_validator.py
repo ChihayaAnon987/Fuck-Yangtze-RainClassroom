@@ -13,6 +13,12 @@ from typing import List, Tuple, Optional, Dict
 logger = logging.getLogger(__name__)
 
 
+def _normalize_answer(answer) -> List[str]:
+    """规范化答案为非空字符串列表"""
+    answer_list = answer if isinstance(answer, list) else [answer]
+    return [a for a in answer_list if a and str(a).strip()]
+
+
 def validate_answer_for_problem_type(
     answer,
     problem_type: int,
@@ -32,11 +38,7 @@ def validate_answer_for_problem_type(
         - normalized_answer: 规范化后的答案列表
         - validation_reason: 校验原因说明
     """
-    # 规范化答案为列表
-    answer_list = answer if isinstance(answer, list) else [answer]
-    # 过滤空值
-    answer_list = [a for a in answer_list if a and str(a).strip()]
-    
+    answer_list = _normalize_answer(answer)
     logger.info(f"[VALIDATOR] 校验答案: type={problem_type}, answer={answer_list}")
     
     # 单选题校验

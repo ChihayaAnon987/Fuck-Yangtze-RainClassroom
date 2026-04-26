@@ -61,7 +61,7 @@ class AIStrategy:
 
         try:
             ocr_result = ocr_form_url_image(img_url)
-            logger.info(f"[STRATEGY] OCR 结果: {ocr_result}")
+            print(f"[STRATEGY] OCR 结果: {ocr_result}")
             return ocr_result, True
         except Exception as e:
             logger.error(f"[STRATEGY] OCR 失败: {e}")
@@ -80,7 +80,6 @@ class AIStrategy:
             答案列表，如果未找到则返回 None
         """
         if not enable_question_bank:
-            logger.info("[STRATEGY] 题库搜索已关闭，跳过题库，直接调用 AI")
             return None
 
         if not problem_text.strip():
@@ -88,9 +87,9 @@ class AIStrategy:
             return None
 
         try:
-            logger.info("[STRATEGY] 开始题库搜索...")
+            print("[STRATEGY] 开始题库搜索...")
             result = search(problem_text)
-            logger.info(f"[STRATEGY] 题库返回结果: {result}")
+            print(f"[STRATEGY] 题库返回结果: {result}")
 
             if result and "data" in result and "answer" in result["data"]:
                 answer_text = result["data"]["answer"]
@@ -98,18 +97,18 @@ class AIStrategy:
                     # 尝试解析答案
                     extracted = self._extract_answer_from_search(answer_text)
                     if extracted:
-                        logger.info(f"[STRATEGY] 题库搜到答案: {extracted}")
+                        print(f"[STRATEGY] 题库搜到答案: {extracted}")
                         return extracted
 
-            logger.info("[STRATEGY] 题库未搜到该题")
+            print("[STRATEGY] 题库未搜到该题")
             return None
         except Exception as e:
             logger.error(f"[STRATEGY] 题库搜索异常: {e}")
             return None
 
-    def _build_messages(self, problem_type: str, problem_text: str, options: List[str]) -> List[Dict[str, str]]:
-        """构建AI消息"""
-        system_prompt = (
+    def _get_system_prompt(self) -> str:
+        """获取系统提示词"""
+        return (
             "你是一个专业的课堂答题助手。请严格按照要求格式回答问题。\n"
             "1. 单选题：只返回一个选项字母，如 ['B']\n"
             "2. 多选题：返回所有正确选项的字母列表，如 ['A', 'B', 'D']\n"
@@ -123,27 +122,35 @@ class AIStrategy:
             "10. 不要添加任何额外的文字、标点符号或解释。"
         )
 
-        if problem_type == "单选题":
-            user_content = f"题目类型：单选题\n题目：{problem_text}\n选项：{options}\n请只返回最合适的答案。"
-        elif problem_type == "多选题":
-            user_content = f"题目类型：多选题\n题目：{problem_text}\n选项：{options}\n请返回所有正确选项。"
-        elif problem_type == "投票题":
-            user_content = f"题目类型：投票题\n题目：{problem_text}\n选项：{options}\n请选择你认为最合适的选项。"
-        elif problem_type == "主观题":
-            if options:
-                user_content = f"题目类型：主观题（有选项）\n题目：{problem_text}\n可选答案：{options}\n请选择或表达你的观点。"
-            else:
-                user_content = f"题目类型：主观题\n题目：{problem_text}\n请表达你的观点或答案。"
-        else:  # 填空题
-            if options:
-                # 填空题但有选项，说明是主观选择题
-                user_content = f"题目类型：填空题（主观选择）\n题目：{problem_text}\n可选答案：{options}\n请选择最合适的选项字母。"
-            else:
-                user_content = f"题目类型：填空题\n题目：{problem_text}\n只填写最终答案。"
+    def _get_user_prompt(self, problem_type: str, problem_text: str, options: List[str]) -> str:
+        """根据题目类型生成用户提示词"""
+        base_info = f"题目：{problem_text}"
+        options_info = f"选项：{options}" if options else ""
 
+        if problem_type == "单选题":
+            return f"题目类型：单选题\n{base_info}\n{options_info}\n请只返回最合适的答案。"
+        
+        if problem_type == "多选题":
+            return f"题目类型：多选题\n{base_info}\n{options_info}\n请返回所有正确选项。"
+        
+        if problem_type == "投票题":
+            return f"题目类型：投票题\n{base_info}\n{options_info}\n请选择你认为最合适的选项。"
+        
+        if problem_type == "主观题":
+            if options:
+                return f"题目类型：主观题（有选项）\n{base_info}\n可选答案：{options}\n请选择或表达你的观点。"
+            return f"题目类型：主观题\n{base_info}\n请表达你的观点或答案。"
+        
+        # 填空题
+        if options:
+            return f"题目类型：填空题（主观选择）\n{base_info}\n可选答案：{options}\n请选择最合适的选项字母。"
+        return f"题目类型：填空题\n{base_info}\n只填写最终答案。"
+
+    def _build_messages(self, problem_type: str, problem_text: str, options: List[str]) -> List[Dict[str, str]]:
+        """构建AI消息"""
         return [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content}
+            {"role": "system", "content": self._get_system_prompt()},
+            {"role": "user", "content": self._get_user_prompt(problem_type, problem_text, options)}
         ]
 
     def _parse_ai_response(self, response: str) -> List[str]:
@@ -209,23 +216,27 @@ class AIStrategy:
     def _extract_answer_directly(self, text: str) -> List[str]:
         """直接从文本中提取答案"""
         text = text.strip()
+        if not text:
+            return []
         
-        # 如果是单个字母
+        # 1. 单个字母
         if len(text) == 1 and text.isalpha():
             return [text.upper()]
             
-        # 如果包含方括号，尝试提取内容
+        # 2. 方括号内容 [A, B]
         if "[" in text and "]" in text:
             content = text[text.find("[")+1:text.rfind("]")]
             items = [item.strip().strip("'\"") for item in content.split(",")]
-            return [item for item in items if item]
+            cleaned_items = [item for item in items if item]
+            if cleaned_items:
+                return cleaned_items
             
-        # 如果是逗号分隔的字母
-        if "," in text and all(c.strip().isalpha() or c.strip() in ", " for c in text):
-            items = [item.strip() for item in text.split(",")]
-            return [item.upper() for item in items if item.isalpha()]
+        # 3. 逗号分隔的字母 A, B, C
+        if "," in text:
+            parts = [p.strip() for p in text.split(",")]
+            if all(p.isalpha() for p in parts if p):
+                return [p.upper() for p in parts if p]
             
-        # 其他情况返回空
         return []
 
     def _extract_answer_from_search(self, search_result: str) -> Optional[List[str]]:
@@ -247,7 +258,7 @@ class AIStrategy:
         Returns:
             答案列表
         """
-        logger.info(f"[STRATEGY] 开始解题流程: type={problem_type}")
+        print(f"[STRATEGY] 开始解题流程: type={problem_type}")
 
         # 第一阶段：文本提取
         problem_text, is_ocr_used = self._extract_problem_text(problem, img_url)
@@ -262,7 +273,7 @@ class AIStrategy:
 
         # 第三阶段：AI作答
         messages = self._build_messages(problem_type, problem_text, options)
-        logger.info(f"[STRATEGY] 调用 AI 解题 (models={self.available_models})...")
+        print(f"[STRATEGY] 调用 AI 解题 (models={self.available_models})...")
 
         try:
             # 并行调用所有模型，选择最佳答案
@@ -272,10 +283,8 @@ class AIStrategy:
                 timeout=self.timeout  # 传递超时参数
             )
             
-            logger.info(f"[STRATEGY] 最佳模型 {best_model} (置信度: {best_confidence:.2f}): {best_answer_str[:100]}...")
-            answer = self._parse_ai_response(best_answer_str)
-            # logger.info(f"[STRATEGY] AI 回复: {answer}")
-            return answer
+            print(f"[STRATEGY] 最佳模型 {best_model} (置信度: {best_confidence:.2f}): {best_answer_str[:100]}...")
+            return self._parse_ai_response(best_answer_str)
             
         except Exception as e:
             logger.error(f"[STRATEGY] AI 解题失败: {e}")

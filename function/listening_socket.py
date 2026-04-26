@@ -24,7 +24,8 @@ active_ws_lock = threading.Lock()
 active_ws = {}
 
 
-def log(level, message, lesson_id=None):
+def _log_message(level: str, message: str, course_name=None):
+    """统一的日志输出函数"""
     level_map = {
         "info": "[INFO]",
         "ok": "[ OK ]",
@@ -32,15 +33,19 @@ def log(level, message, lesson_id=None):
         "error": "[ERR ]"
     }
     prefix = level_map.get(level, "[INFO]")
-    if lesson_id is None:
+    if course_name is None:
         print(f"{prefix} {message}")
     else:
-        print(f"{prefix} [lesson:{lesson_id}] {message}")
+        print(f"{prefix} [{course_name}] {message}")
 
 
-def debug_log(message, lesson_id=None):
+def log(level, message, course_name=None):
+    _log_message(level, message, course_name)
+
+
+def debug_log(message, course_name=None):
     if VERBOSE_LOG:
-        log("info", message, lesson_id)
+        _log_message("info", message, course_name)
 
 
 def wait_or_shutdown(seconds):
@@ -77,7 +82,7 @@ def load_answer_cache():
             data = json.load(file)
             return data if isinstance(data, dict) else {}
     except Exception as e:
-        log("warn", f"读取题目缓存失败: {e}")
+        _log_message("warn", f"读取题目缓存失败: {e}")
         return {}
 
 
@@ -86,7 +91,7 @@ def save_answer_cache(cache):
         with open(answer_cache_file, "w", encoding="utf-8") as file:
             json.dump(cache, file, ensure_ascii=False, indent=2)
     except Exception as e:
-        log("warn", f"写入题目缓存失败: {e}")
+        _log_message("warn", f"写入题目缓存失败: {e}")
 
 
 answer_cache = load_answer_cache()
@@ -253,11 +258,11 @@ def _map_answers_to_option_keys(answer, normalized_options, options_for_submit):
     return deduped if deduped else answer_list
 
 
-def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second=10, 
-                       listening_started_ref=None, listening_start_time_ref=None, 
+def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second=10,
+                       listening_started_ref=None, listening_start_time_ref=None,
                        listening_stop_event=None, status_thread=None,
                        answered_success=None, answering_in_progress=None,
-                       answer_state_lock=None):
+                       answer_state_lock=None, course_name=None):
     # 这些是从外层传入的引用，用来保持状态在重连之间
     if listening_started_ref is None:
         listening_started_ref = [False]
@@ -281,18 +286,18 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
         while not listening_stop_event.is_set():
             if listening_started_ref[0] and listening_start_time_ref[0]:
                 listening_duration = int(time.time() - listening_start_time_ref[0])
-                print(f"\r[ >> ] [lesson:{lesson_id}] 监听中... ({listening_duration}s)", end='', flush=True)
+                print(f"\r[ >> ] [{course_name}] 监听中... ({listening_duration}s)", end='', flush=True)
             time.sleep(1)
 
     def send_safe(ws, payload):
         try:
             if ws is None or ws.sock is None or not ws.sock.connected:
-                debug_log(f"连接已关闭，跳过发送 {payload.get('op', 'unknown')}", lesson_id)
+                debug_log(f"连接已关闭，跳过发送 {payload.get('op', 'unknown')}", course_name)
                 return False
             ws.send(json.dumps(payload))
             return True
         except Exception as e:
-            log("warn", f"发送失败: {e}", lesson_id)
+            log("warn", f"发送失败: {e}", course_name)
             return False
 
     def on_message(ws, message):
@@ -303,9 +308,9 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
                 if listening_started_ref[0] and listening_start_time_ref[0]:
                     listening_duration = int(time.time() - listening_start_time_ref[0])
                     print()  # 换行
-                    log("ok", f"课程结束，监听时长 {listening_duration}s", lesson_id)
+                    log("ok", f"课程结束，监听时长 {listening_duration}s", course_name)
                 else:
-                    log("ok", "课程结束，关闭连接", lesson_id)
+                    log("ok", "课程结束，关闭连接", course_name)
                 ws.lesson_ended = True
                 ws.close()  # 关闭 WebSocket 连接
                 return
@@ -321,7 +326,7 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
                 # 最新的题目
                 if len(time_lines) == 0:
                     # 没题可答，继续获取PPT内容，看看是否老师换了新的PPT文件
-                    debug_log("当前无题，等待下一次轮询", lesson_id)
+                    debug_log("当前无题，等待下一次轮询", course_name)
                     if wait_or_shutdown(sleep_second):
                         return
                     auth_payload = {
@@ -347,7 +352,8 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
                                 img_url=problem["img_url"],
                                 answered_success=answered_success,
                                 answering_in_progress=answering_in_progress,
-                                answer_state_lock=answer_state_lock
+                                answer_state_lock=answer_state_lock,
+                                course_name=course_name
                             )
                             # 移除回答完的问题
                             if q_id in problem_list:
@@ -373,7 +379,7 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
                         if item["type"] == "slide":
                             ppt_ids.add(item["pres"])
                 else:
-                    debug_log("收到非timeline消息", lesson_id)
+                    debug_log("收到非timeline消息", course_name)
                 # 开始获取PPT
                 new_headers = headers.copy()
                 new_headers["Authorization"] = "Bearer " + ppt_jwt
@@ -402,7 +408,7 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
                                         if isinstance(raw_options, str):
                                             try:
                                                 options = json.loads(raw_options)
-                                                debug_log(f"选项从JSON字符串解析: {type(options)}", lesson_id)
+                                                debug_log(f"选项从JSON字符串解析: {type(options)}", course_name)
                                             except:
                                                 options = raw_options
                                         else:
@@ -417,20 +423,20 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
                                             "options": options,
                                             "img_url": ppt["coverAlt"]
                                         }
-                                        debug_log(f"缓存待答题 problemId={question['problemId']} options_type={type(options)}", lesson_id)
+                                        debug_log(f"缓存待答题 problemId={question['problemId']} options_type={type(options)}", course_name)
                                         problem_list[question["problemId"]] = save_dict
                             except Exception as ppt_err:
-                                log("warn", f"处理PPT题目异常: {ppt_err}", lesson_id)
+                                log("warn", f"处理PPT题目异常: {ppt_err}", course_name)
                                 if VERBOSE_LOG:
                                     print(f"[WARN] PPT处理异常详情: {traceback.format_exc()}")
                     else:
-                        log("warn", f"获取PPT失败 status={response.status_code}", lesson_id)
+                        log("warn", f"获取PPT失败 status={response.status_code}", course_name)
                 # 开始监听 启动后台线程
                 # 标记监听已启动
                 if not listening_started_ref[0]:
                     listening_started_ref[0] = True
                     listening_start_time_ref[0] = time.time()
-                    log("info", "进入监听状态", lesson_id)
+                    log("info", "进入监听状态", course_name)
                     # 启动后台线程来定期更新监听状态
                     if status_thread[0] is None:
                         status_thread[0] = threading.Thread(target=listening_status_updater, daemon=True)
@@ -444,7 +450,7 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
         except Exception as e:
             # 【改进】捕获详细的错误信息便于调试
             error_detail = traceback.format_exc()
-            log("error", f"消息处理异常: {e}", lesson_id)
+            log("error", f"消息处理异常: {e}", course_name)
             if VERBOSE_LOG or "string indices" in str(e):
                 # 输出完整的traceback便于调试
                 print(f"[ERR TRACE] {error_detail}")
@@ -477,10 +483,10 @@ def on_open_connet(jwt, lesson_id, identity_id):
 
 
 # 监听上课
-def start_socket_ppt(ppt_jwt, socket_jwt, lesson_id, identity_id):
+def start_socket_ppt(ppt_jwt, socket_jwt, lesson_id, identity_id, course_name=None):
     reconnect_count = 0
     delay = 2
-    
+
     # 在外层创建这些变量，使其在整个连接生命周期内保持
     listening_started_ref = [False]
     listening_start_time_ref = [None]
@@ -505,7 +511,8 @@ def start_socket_ppt(ppt_jwt, socket_jwt, lesson_id, identity_id):
                 status_thread=status_thread,
                 answered_success=answered_success,
                 answering_in_progress=answering_in_progress,
-                answer_state_lock=answer_state_lock
+                answer_state_lock=answer_state_lock,
+                course_name=course_name
             ),
             on_error=on_error,
             on_close=on_close,
@@ -517,19 +524,19 @@ def start_socket_ppt(ppt_jwt, socket_jwt, lesson_id, identity_id):
         unregister_ws(lesson_id, ws)
 
         if shutdown_event.is_set():
-            log("info", "收到退出信号，停止监听", lesson_id)
+            log("info", "收到退出信号，停止监听", course_name)
             break
 
         if getattr(ws, "lesson_ended", False):
-            log("ok", "课程结束，停止重连", lesson_id)
+            log("ok", "课程结束，停止重连", course_name)
             break
 
         if getattr(ws, "stop_reconnect", False):
-            log("info", "解释器正在退出，停止重连", lesson_id)
+            log("info", "解释器正在退出，停止重连", course_name)
             break
 
         reconnect_count += 1
-        log("warn", f"连接断开，{delay}秒后重连（第{reconnect_count}次）", lesson_id)
+        log("warn", f"连接断开，{delay}秒后重连（第{reconnect_count}次）", course_name)
         if wait_or_shutdown(delay):
             break
         delay = 5
@@ -546,7 +553,8 @@ def start_all_sockets(on_lesson_list):
                 "ppt_jwt": item["ppt_jwt"],
                 "socket_jwt": item["socket_jwt"],
                 "lesson_id": item["lesson_id"],
-                "identity_id": item["identity_id"]
+                "identity_id": item["identity_id"],
+                "course_name": item.get("course_name")
             },
             daemon=False
         )
@@ -567,8 +575,9 @@ def start_all_sockets(on_lesson_list):
 
 # 答题
 def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, img_url,
-           answered_success=None, answering_in_progress=None, answer_state_lock=None):
-    debug_log(f"答题触发 type={question_type[problem_type]} problemId={problem_id}", lesson_id)
+           answered_success=None, answering_in_progress=None, answer_state_lock=None,
+           course_name=None):
+    debug_log(f"答题触发 type={question_type[problem_type]} problemId={problem_id}", course_name)
 
     if answered_success is None:
         answered_success = set()
@@ -583,7 +592,7 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
             #log("info", f"题目已提交过，跳过重复答题 problemId={problem_id}", lesson_id)
             return
         if dedupe_key in answering_in_progress:
-            debug_log(f"题目正在答题中，跳过重复触发 problemId={problem_id}", lesson_id)
+            debug_log(f"题目正在答题中，跳过重复触发 problemId={problem_id}", course_name)
             return
         answering_in_progress.add(dedupe_key)
 
@@ -598,7 +607,7 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
                 parsed = json.loads(normalized_options)
                 normalized_options = parsed if isinstance(parsed, list) else []
             except Exception:
-                debug_log(f"无法解析选项字符串: {normalized_options[:50]}", lesson_id)
+                debug_log(f"无法解析选项字符串: {normalized_options[:50]}", course_name)
                 normalized_options = []
 
         if not isinstance(normalized_options, list):
@@ -618,7 +627,7 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
         hit_cache = cached_result is not None
         if cached_result is not None:
             result = cached_result
-            debug_log(f"命中题目缓存，跳过题库API problemId={problem_id}", lesson_id)
+            debug_log(f"命中题目缓存，跳过题库API problemId={problem_id}", course_name)
         else:
             # 【关键改进】添加WebSocket超时保护
             # WebSocket的ping_timeout=10秒，这里设置<8秒的超时可以防止连接断开
@@ -635,17 +644,17 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
                     )
                     # 等待结果，超时时间为配置的值
                     result = future.result(timeout=ai_request_timeout)
-                    debug_log(f"AI解题完成 problemId={problem_id}", lesson_id)
+                    debug_log(f"AI解题完成 problemId={problem_id}", course_name)
             except FuturesTimeoutError:
                 # 超时：选择一个安全的默认答案
-                log("warn", f"AI解题超时（{ai_request_timeout}秒），使用默认答案 problemId={problem_id}", lesson_id)
+                log("warn", f"AI解题超时（{ai_request_timeout}秒），使用默认答案 problemId={problem_id}", course_name)
                 # 如果有选项，返回第一个选项；否则返回"A"
                 if options_for_submit and len(options_for_submit) > 0:
                     result = [options_for_submit[0]]
                 else:
                     result = ["A"]  # 最后的保险
             except Exception as e:
-                log("error", f"AI解题异常: {str(e)[:100]} problemId={problem_id}", lesson_id)
+                log("error", f"AI解题异常: {str(e)[:100]} problemId={problem_id}", course_name)
                 # 异常处理：也使用默认答案
                 if options_for_submit and len(options_for_submit) > 0:
                     result = [options_for_submit[0]]
@@ -655,7 +664,7 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
         mapped_result = _map_answers_to_option_keys(result, normalized_options, options_for_submit)
         was_mapped = mapped_result != result
         if was_mapped:
-            log("info", f"答案映射: 原始={result} -> 提交={mapped_result}", lesson_id)
+            log("info", f"答案映射: 原始={result} -> 提交={mapped_result}", course_name)
         result = mapped_result
 
         # 【质量保障】校验答案与题型是否匹配
@@ -666,14 +675,14 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
         )
 
         if not is_valid:
-            log("warn", f"答案校验失败: {validation_reason}，使用默认答案 problemId={problem_id}", lesson_id)
+            log("warn", f"答案校验失败: {validation_reason}，使用默认答案 problemId={problem_id}", course_name)
             # 校验失败时使用默认答案
             if options_for_submit and len(options_for_submit) > 0:
                 result = [options_for_submit[0]]
             else:
                 result = ["A"]
         elif len(validated_result) != len(result):
-            log("info", f"答案已规范化: {validation_reason}，从 {result} -> {validated_result}", lesson_id)
+            log("info", f"答案已规范化: {validation_reason}，从 {result} -> {validated_result}", course_name)
             result = validated_result
 
         if (not hit_cache) or was_mapped:
@@ -706,15 +715,15 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
         if response.status_code == 200:
             with answer_state_lock:
                 answered_success.add(dedupe_key)
-            log("ok", f"答题成功  题目={problem_content} 答案={result}", lesson_id)
+            log("ok", f"答题成功  题目={problem_content} 答案={result}", course_name)
         else:
             email_notice(content="答题失败，请手动前往雨课堂", subject="答题失败")
-            log("error", f"答题失败 problemId={problem_id}", lesson_id)
+            log("error", f"答题失败 problemId={problem_id}", course_name)
             msg = response.json()["msg"]
             if msg == "LESSON_END":
-                log("info", "题目已结束", lesson_id)
+                log("info", "题目已结束", course_name)
             else:
-                log("warn", f"答题返回: {msg}", lesson_id)
+                log("warn", f"答题返回: {msg}", course_name)
     finally:
         with answer_state_lock:
             answering_in_progress.discard(dedupe_key)

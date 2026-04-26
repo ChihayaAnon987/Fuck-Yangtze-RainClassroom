@@ -106,7 +106,7 @@ def main():
     
     # 找一个文法分析的单选题  
     for p in problems:
-        if p["problem_type"] == 1 and "S→" in p["problem_content"]:
+        if p["problem_type"] == 1 and "四元式" in p["problem_content"]:
             selected_problems.append(p)
             break
     

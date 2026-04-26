@@ -24,7 +24,7 @@ def init_ai_strategy(timeout: int = 30):
     """
     global _strategy
     _strategy = AIStrategy(timeout=timeout)
-    logger.info(f"[AI] 策略引擎已初始化，支持模型: {_strategy.available_models}")
+    print(f"[AI] 策略引擎已初始化，支持模型: {_strategy.available_models}")
 
 
 def request_ai(type, problem, options, img_url) -> List[str]:
@@ -48,7 +48,7 @@ def request_ai(type, problem, options, img_url) -> List[str]:
         
     try:
         answer = _strategy.solve(type, problem, options, img_url)
-        logger.info(f"[AI] 解题完成 - 来源: ai, 答案: {answer}")
+        print(f"[AI] 解题完成 - 来源: ai, 答案: {answer}")
         return answer
     except Exception as e:
         logger.error(f"[AI] 解题失败: {e}")

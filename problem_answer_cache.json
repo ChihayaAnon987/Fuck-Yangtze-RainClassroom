@@ -29,36 +29,6 @@
     ],
     "updated_at": 1776330164247
   },
-  "1665047802466078208:1665047947530538496": {
-    "question": {
-      "problem_id": "1665047947530538496",
-      "problem_type": 1,
-      "problem_content": "S→bAb {print “1”}\rA→(B {print “2”}\rA→a {print “3”}\rB→aA) {print “4”}\r若输入序列为b(a(a(aa)))b，且采用自底向上的分析方法，则输出序列为( )。",
-      "options": [
-        {
-          "key": "A",
-          "value": "12224441"
-        },
-        {
-          "key": "B",
-          "value": "34242421"
-        },
-        {
-          "key": "C",
-          "value": "32224441"
-        },
-        {
-          "key": "D",
-          "value": "14242421"
-        }
-      ],
-      "img_url": "https://changjiang-private-qn.yuketang.cn/slide/37857819/cover2848_20260416155308.jpg?imageView2/2/w/1280/format/webp&e=1776352998&token=IAM-gs8ue1pDIGwtR1CR0Zjdagg7Q2tn5G_1BqTmhmqa:4JIj3Pkr8jAPPbvhwT2hK56r1fw="
-    },
-    "answer": [
-      "B"
-    ],
-    "updated_at": 1776331404026
-  },
   "1667950695615597312:1667951339684765696": {
     "question": {
       "problem_id": "1667951339684765696",

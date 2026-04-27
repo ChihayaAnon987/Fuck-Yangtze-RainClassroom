@@ -1,17 +1,29 @@
 import requests
 from requests.exceptions import RequestException, SSLError
 from config import host, api, headers
+from util.session_manager import request_with_auto_session_refresh
+
+
+def _execute_request(method, url, **kwargs):
+    try:
+        return requests.request(method=method, url=url, timeout=10, **kwargs)
+    except SSLError as e:
+        print(f"[WARN] 获取用户信息SSL失败: {e}")
+    except RequestException as e:
+        print(f"[WARN] 获取用户信息失败: {e}")
+    return None
 
 
 # 获取用户名字 用于写日志
 def get_user_name():
-    try:
-        response = requests.get(host + api["user_info"], headers=headers, timeout=10)
-    except SSLError as e:
-        print(f"[WARN] 获取用户信息SSL失败: {e}")
-        return "未知用户"
-    except RequestException as e:
-        print(f"[WARN] 获取用户信息失败: {e}")
+    response = request_with_auto_session_refresh(
+        request_executor=_execute_request,
+        method="GET",
+        url=host + api["user_info"],
+        headers=headers,
+        reason="获取用户信息检测到 SESSION 失效",
+    )
+    if response is None:
         return "未知用户"
 
     if response.status_code == 200:

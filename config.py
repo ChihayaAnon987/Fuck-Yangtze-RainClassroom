@@ -158,3 +158,15 @@ if scheduled_start_time_str:
     scheduled_start_time = [time.strip() for time in scheduled_start_time_str.split(",") if time.strip()]
 else:
     scheduled_start_time = []
+
+# SESSION刷新等待超时（秒），用于二维码扫码流程
+session_refresh_timeout_seconds = _get_integer_config(
+    ["SESSION_REFRESH_TIMEOUT"],
+    default=180,
+)
+
+# SESSION保活间隔（秒），<=0 表示禁用保活线程
+session_keep_alive_interval_seconds = _get_integer_config(
+    ["SESSION_KEEP_ALIVE_INTERVAL"],
+    default=600,
+)

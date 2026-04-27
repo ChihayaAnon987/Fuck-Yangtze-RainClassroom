@@ -7,11 +7,13 @@ from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 import requests
+from requests.exceptions import RequestException
 import websocket
 import json
 from config import host, api, headers, question_type, ai_request_timeout
 from util.notice import email_notice
 from util.ai import request_ai, init_ai_strategy
+from util.session_manager import request_with_auto_session_refresh
 from util.timestamp import get_date_time
 from util.answer_validator import validate_answer_for_problem_type
 
@@ -22,6 +24,13 @@ VERBOSE_LOG = False
 shutdown_event = threading.Event()
 active_ws_lock = threading.Lock()
 active_ws = {}
+
+
+def _execute_direct_request(method, url, **kwargs):
+    try:
+        return requests.request(method=method, url=url, timeout=10, **kwargs)
+    except RequestException:
+        return None
 
 
 def _log_message(level: str, message: str, course_name=None):
@@ -390,7 +399,16 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
                 for pres_id in ppt_ids:
                     url = host + api["get_ppt"].format(pres_id)
 
-                    response = requests.get(headers=new_headers, url=url)
+                    response = request_with_auto_session_refresh(
+                        request_executor=_execute_direct_request,
+                        method="GET",
+                        url=url,
+                        headers=new_headers,
+                        reason="拉取PPT时检测到 SESSION 失效",
+                    )
+                    if response is None:
+                        log("warn", "获取PPT失败: 网络异常", course_name)
+                        continue
                     if response.status_code == 200:
                         ppt_pages = response.json()["data"]["slides"]
                         for ppt in ppt_pages:
@@ -710,7 +728,17 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
         new_headers["User-Agent"] = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                                      "Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0")
 
-        response = requests.post(url=host + api["answer"], json=post_json, headers=new_headers)
+        response = request_with_auto_session_refresh(
+            request_executor=_execute_direct_request,
+            method="POST",
+            url=host + api["answer"],
+            headers=new_headers,
+            json=post_json,
+            reason="提交答案时检测到 SESSION 失效",
+        )
+        if response is None:
+            log("error", f"答题失败 problemId={problem_id}（网络异常）", course_name)
+            return
 
         if response.status_code == 200:
             with answer_state_lock:

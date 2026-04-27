@@ -7,3 +7,4 @@ paddlepaddle
 websocket-client
 python-dotenv
 apscheduler
+qrcode

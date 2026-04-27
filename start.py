@@ -8,14 +8,27 @@ from config import (
     ai_request_timeout,
     enable_scheduled_start,
     scheduled_start_time,
+    session_keep_alive_interval_seconds,
 )
 from function.check_in import get_listening_classes_and_sign
 from util.ai import init_ai_strategy
+from util.session_manager import ensure_session_alive, start_session_keep_alive_daemon
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 
 _system_run_lock = threading.Lock()
 _system_running = False
+_session_keep_alive_stop_event = None
+
+
+def start_session_services():
+    global _session_keep_alive_stop_event
+    ensure_session_alive(reason="start.py 启动时进行会话校验")
+
+    if _session_keep_alive_stop_event is None:
+        _session_keep_alive_stop_event = start_session_keep_alive_daemon(
+            session_keep_alive_interval_seconds
+        )
 
 
 def initialize_and_start_answer_system():
@@ -78,6 +91,8 @@ def setup_and_start_scheduler():
 
 
 if __name__ == "__main__":
+    start_session_services()
+
     if enable_scheduled_start:
         setup_and_start_scheduler()
     else:

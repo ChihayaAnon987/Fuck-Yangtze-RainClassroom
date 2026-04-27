@@ -9,6 +9,7 @@ from function.user import get_user_name
 from config import host, api, headers, log_file_name, check_in_sources
 from util.file import write_log, read_log
 from util.notice import email_notice
+from util.session_manager import request_with_auto_session_refresh
 from util.timestamp import get_now
 
 
@@ -36,14 +37,29 @@ def _build_retry_session():
 _http_session = _build_retry_session()
 
 
-def _safe_request(method, url, **kwargs):
+def _execute_request(method, url, **kwargs):
     try:
-        return _http_session.request(method=method, url=url, timeout=REQUEST_TIMEOUT_SECONDS, **kwargs)
+        return _http_session.request(
+            method=method,
+            url=url,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            **kwargs,
+        )
     except SSLError as e:
         print(f"[ERROR] SSL连接失败: {e}")
     except RequestException as e:
         print(f"[ERROR] 网络请求失败: {e}")
     return None
+
+
+def _safe_request(method, url, **kwargs):
+    return request_with_auto_session_refresh(
+        request_executor=_execute_request,
+        method=method,
+        url=url,
+        reason="课堂请求检测到 SESSION 失效",
+        **kwargs,
+    )
 
 
 def _parse_api_response_data(response_data):

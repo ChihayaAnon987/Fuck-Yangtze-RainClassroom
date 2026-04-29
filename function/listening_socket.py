@@ -476,14 +476,12 @@ def on_message_connect(ppt_jwt, lesson_id, identity_id, socket_jwt, sleep_second
 
 
 def on_error(ws, error):
-    log("error", f"连接异常: {error}")
     if "interpreter shutdown" in str(error).lower():
         ws.stop_reconnect = True
 
 
 def on_close(ws, close_status_code, close_msg):
-    log("warn", f"连接关闭 code={close_status_code} msg={close_msg}")
-    return
+    pass
 
 
 def on_open_connet(jwt, lesson_id, identity_id):
@@ -554,7 +552,6 @@ def start_socket_ppt(ppt_jwt, socket_jwt, lesson_id, identity_id, course_name=No
             break
 
         reconnect_count += 1
-        log("warn", f"连接断开，{delay}秒后重连（第{reconnect_count}次）", course_name)
         if wait_or_shutdown(delay):
             break
         delay = 5
@@ -682,7 +679,7 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
         mapped_result = _map_answers_to_option_keys(result, normalized_options, options_for_submit)
         was_mapped = mapped_result != result
         if was_mapped:
-            log("info", f"答案映射: 原始={result} -> 提交={mapped_result}", course_name)
+            debug_log(f"答案映射: 原始={result} -> 提交={mapped_result}", course_name)
         result = mapped_result
 
         # 【质量保障】校验答案与题型是否匹配
@@ -700,7 +697,7 @@ def answer(lesson_id, problem_id, problem_type, jwt, problem_content, options, i
             else:
                 result = ["A"]
         elif len(validated_result) != len(result):
-            log("info", f"答案已规范化: {validation_reason}，从 {result} -> {validated_result}", course_name)
+            debug_log(f"答案已规范化: {validation_reason}，从 {result} -> {validated_result}", course_name)
             result = validated_result
 
         if (not hit_cache) or was_mapped:

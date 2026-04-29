@@ -48,7 +48,6 @@ def request_ai(type, problem, options, img_url) -> List[str]:
         
     try:
         answer = _strategy.solve(type, problem, options, img_url)
-        print(f"[AI] 解题完成 - 来源: ai, 答案: {answer}")
         return answer
     except Exception as e:
         logger.error(f"[AI] 解题失败: {e}")

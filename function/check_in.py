@@ -45,10 +45,10 @@ def _execute_request(method, url, **kwargs):
             timeout=REQUEST_TIMEOUT_SECONDS,
             **kwargs,
         )
-    except SSLError as e:
-        print(f"[ERROR] SSL连接失败: {e}")
-    except RequestException as e:
-        print(f"[ERROR] 网络请求失败: {e}")
+    except SSLError:
+        pass
+    except RequestException:
+        pass
     return None
 
 
@@ -70,14 +70,12 @@ def _parse_api_response_data(response_data):
     if isinstance(data, str):
         try:
             data = json.loads(data)
-            print(f"[DEBUG] API data 字段已从JSON字符串解析为对象")
         except json.JSONDecodeError as e:
             print(f"[ERROR] 无法解析API data 字段，请重新获取SESSION: {e}")
             return None
     
     # 验证data是字典类型
     if not isinstance(data, dict):
-        print(f"[ERROR] API data 字段类型错误，期望dict但收到 {type(data).__name__}")
         return None
         
     return data
@@ -88,13 +86,11 @@ def _parse_list_field(field_value, field_name):
     if isinstance(field_value, str):
         try:
             field_value = json.loads(field_value)
-            print(f"[DEBUG] {field_name} 已从JSON字符串解析")
         except json.JSONDecodeError as e:
             print(f"[ERROR] 无法解析 {field_name}: {e}")
             return None
     
     if not isinstance(field_value, list):
-        print(f"[ERROR] {field_name} 类型错误，期望list但收到 {type(field_value).__name__}")
         return None
         
     return field_value
@@ -170,7 +166,7 @@ def _process_classroom_item(item, filtered_courses, on_lesson_list):
             print("失败", response_sign.status_code, response_sign.text)
             return False
     except (KeyError, TypeError) as e:
-        print(f"[ERROR] 处理课堂项目时出错: {e}, 项目数据: {item}")
+        print(f"[ERROR] 处理课堂项目时出错: {e}")
         return False
 
 
@@ -182,12 +178,12 @@ def get_listening_classes_and_sign(filtered_courses: list):
     
     # 第二层防守：验证response是字典
     if not isinstance(response, dict):
-        print(f"[ERROR] get_listening()返回类型错误，期望dict但收到 {type(response).__name__}: {response}")
+        print("[ERROR] API响应格式异常")
         return None
     
     # 检查关键字段存在
     if "onLessonClassrooms" not in response:
-        print(f"[ERROR] API响应缺少 onLessonClassrooms 字段，收到字段: {list(response.keys())}")
+        print("[ERROR] API响应缺少课堂数据")
         return None
     
     on_lesson_classrooms = _parse_list_field(response["onLessonClassrooms"], "onLessonClassrooms")
@@ -217,12 +213,12 @@ def check_exam():
     
     # 验证response是字典
     if not isinstance(response, dict):
-        print(f"[ERROR] get_listening()返回类型错误，期望dict但收到 {type(response).__name__}")
+        print("[ERROR] API响应格式异常")
         return None
     
     # 检查关键字段
     if "upcomingExam" not in response:
-        print(f"[ERROR] API响应缺少 upcomingExam 字段")
+        print("[ERROR] API响应缺少考试数据")
         return None
     
     upcoming_exam = _parse_list_field(response["upcomingExam"], "upcomingExam")
@@ -235,7 +231,6 @@ def check_exam():
         return
     else:
         print("发现考试")
-        print(exams)
         # 发邮件提醒
         email_notice(subject="雨课堂考试提醒", content="请打开雨课堂")
         return

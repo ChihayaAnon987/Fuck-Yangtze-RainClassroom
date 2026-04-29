@@ -32,9 +32,6 @@ def start_session_services():
 
 
 def initialize_and_start_answer_system():
-    print(f"[INIT] 初始化AI策略引擎...")
-    print(f"[INIT] Request Timeout: {ai_request_timeout}s")
-    
     try:
         init_ai_strategy(timeout=ai_request_timeout)
         print(f"[INIT] AI策略引擎初始化成功")

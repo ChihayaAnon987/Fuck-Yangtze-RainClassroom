@@ -61,7 +61,6 @@ class AIStrategy:
 
         try:
             ocr_result = ocr_form_url_image(img_url)
-            print(f"[STRATEGY] OCR 结果: {ocr_result}")
             return ocr_result, True
         except Exception as e:
             logger.error(f"[STRATEGY] OCR 失败: {e}")
@@ -89,7 +88,6 @@ class AIStrategy:
         try:
             print("[STRATEGY] 开始题库搜索...")
             result = search(problem_text)
-            print(f"[STRATEGY] 题库返回结果: {result}")
 
             if result and "data" in result and "answer" in result["data"]:
                 answer_text = result["data"]["answer"]
@@ -258,7 +256,6 @@ class AIStrategy:
         Returns:
             答案列表
         """
-        print(f"[STRATEGY] 开始解题流程: type={problem_type}")
 
         # 第一阶段：文本提取
         problem_text, is_ocr_used = self._extract_problem_text(problem, img_url)
@@ -273,7 +270,6 @@ class AIStrategy:
 
         # 第三阶段：AI作答
         messages = self._build_messages(problem_type, problem_text, options)
-        print(f"[STRATEGY] 调用 AI 解题 (models={self.available_models})...")
 
         try:
             # 并行调用所有模型，选择最佳答案
@@ -283,7 +279,6 @@ class AIStrategy:
                 timeout=self.timeout  # 传递超时参数
             )
             
-            print(f"[STRATEGY] 最佳模型 {best_model} (置信度: {best_confidence:.2f}): {best_answer_str[:100]}...")
             return self._parse_ai_response(best_answer_str)
             
         except Exception as e:
